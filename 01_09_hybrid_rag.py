@@ -1,0 +1,54 @@
+# Provided code
+import utils
+import weaviate.classes as wvc
+
+client = utils.connect_to_demo_db()  # Connect to the demo database
+
+movies = client.collections.get("Movie")
+
+response = movies.query.fetch_objects(limit=1)
+
+for o in response.objects:
+    print(f"Movie: {o.properties['title']}\n")
+
+
+reviews = client.collections.get("Review")
+
+for alpha in [0.1, 0.9]:
+    response = reviews.query.hybrid(
+        query="fun for the whole family",
+        alpha=alpha,
+        limit=3,
+        return_metadata=wvc.query.MetadataQuery(score=True),
+    )
+
+    print(f"Search results with alpha: {alpha}")
+    for o in response.objects:
+        print(f"Review body: {o.properties['body']}")
+        print(f"Score: {o.metadata.score}\n")
+
+
+
+
+response = movies.generate.near_text(
+    query="action adventure",
+    limit=3,
+    single_prompt="""
+    Suggest a tagline for this film based on the title and description.
+    Title: {title}
+    Description: {description}
+    """,
+)
+
+print(f"Generated results:")
+for o in response.objects:
+    print("---- Movie informaton ----")
+    print(o.properties["title"])
+    print(o.properties["description"])
+    print("---- Generated tagline ----")
+    print(o.generated)
+    print()
+
+
+client.close()
+
